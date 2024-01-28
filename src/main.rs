@@ -288,7 +288,7 @@ impl SccSolver{
 // cycle detection 
 // using normal STACK and dfs approach
 
-// an purely object oriented like rust way of defining a common trait / behaiviour for calling flexible function that impleents
+// an purely object oriented like rust way of defining a common trait / behaiviour for calling flexible function that implements
 // CycleSolver
 trait CycleSolver {
     fn solve(&mut self,g:&Graph) -> bool;
