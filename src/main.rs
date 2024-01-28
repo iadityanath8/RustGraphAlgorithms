@@ -288,12 +288,39 @@ impl SccSolver{
 // cycle detection 
 // using normal STACK and dfs approach
 
-struct CycleDetectionSolver{
+// an purely object oriented like rust way of defining a common trait / behaiviour for calling flexible function that impleents
+// CycleSolver
+trait CycleSolver {
+    fn solve(&mut self,g:&Graph) -> bool;
+    fn fill(&mut self,len:usize);
+}
+
+struct CycleDetectionSolverStackVariant{
     vis:Vec<usize>,
     in_stack:Vec<usize>
 }
 
-impl CycleDetectionSolver{
+impl CycleSolver for CycleDetectionSolverStackVariant{
+    fn fill(&mut self,len:usize) {
+        self.vis.resize(len,0);
+        self.in_stack.resize(len,0);
+    }
+
+    fn solve(&mut self,g:&Graph) -> bool{
+        self.fill(g.len());
+        
+        for i in 0..g.len(){
+            if self.vis[i] == 0{
+                if self.dfs(g,i){
+                    return true;
+                }
+            }    
+        }
+        false
+    }
+}
+
+impl CycleDetectionSolverStackVariant{
     fn new() -> Self{
         Self { vis: Vec::new(),in_stack: Vec::new() }      // design decision
     }
@@ -312,19 +339,72 @@ impl CycleDetectionSolver{
         self.in_stack[u] = 0;
         false
     }
+}
 
-    fn solve(&mut self,g:&Graph) -> bool{
-        self.in_stack.resize(g.len(),0);
-        self.vis.resize(g.len(),0);
+struct CycleDetectionSolverKahnAlgorithm{
+    vis:Vec<usize>,
+    indegree:Vec<usize>,
+}
+
+// implementing a trait for this good idead because at compile time we can despatch the any of the solve method for both of the solver either stackVariant or KahnAlgorithm
+
+impl CycleSolver for CycleDetectionSolverKahnAlgorithm{
+    fn fill(&mut self,len:usize) {
+        self.indegree.resize(len,0);
+        self.vis.resize(len,0);
+    }
+
+    fn solve(&mut self,g:&Graph) -> bool {
+        let mut n:usize = 1;
+
+        self.calculate_indegree(g);
+        let mut q:Queue<usize> = Queue::new();
+        
+        for i in 0..g.len(){
+            if self.indegree[i] == 0{
+                n += 1;
+                q.push(i);
+            }
+        }
+        let mut bfs = || {
+
+            while !q.empty(){
+                let top = *q.top();q.pop();
+                
+                for v in &g[top]{
+                    self.indegree[*v] -= 1;
+                
+                    if self.indegree[*v] == 0{
+                        n += 1;
+                        q.push(*v);
+                    }
+                }
+            }
+        };
+        bfs();
+
+        //println!("{n}"); // debug print
+        if n < g.len(){
+            return true;
+        }
+
+        return false;
+    }
+}
+
+impl CycleDetectionSolverKahnAlgorithm{
+    fn new() -> Self{
+        Self { vis: Vec::new(), indegree: Vec::new() }
+    }
+
+    fn calculate_indegree(&mut self,g:&Graph){
+        self.fill(g.len());
 
         for i in 0..g.len(){
-            if self.vis[i] == 0{
-                if self.dfs(g,i){
-                    return true;
-                }
-            }    
+            for u in &g[i]{
+                self.indegree[*u]+=1;
+            }
         }
-        false
     }
 }
 
@@ -344,7 +424,9 @@ fn main() {
     // solver.tarjans_method(&ra);
 
     let grp:Graph = vec![vec![1],vec![2],vec![3],vec![1]];
-    let mut cycle_solve:CycleDetectionSolver = CycleDetectionSolver::new();
+    //let mut cycle_solve = CycleDetectionSolverStackVariant::new();
+    let mut cycle_solve = CycleDetectionSolverKahnAlgorithm::new();
+    
     let val = cycle_solve.solve(&grp);
     
     println!("{val}");
